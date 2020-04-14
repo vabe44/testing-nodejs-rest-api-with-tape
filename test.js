@@ -138,6 +138,34 @@ tape('GET - non-existing property of existing student', async function (t) {
   })
 })
 
+tape('DELETE - property of non-existing student', async function (t) {
+  const url = `${endpoint}/undefined/courses/calculus/quizzes/ye0ab61`
+  jsonist.delete(url, (err, body, res) => {
+    if (err) t.error(err)
+    t.equal(res.statusCode, 404, 'should return 404 if file doesn\'t exist')
+    t.end()
+  })
+})
+
+tape('DELETE - non-existing property of student', async function (t) {
+  const url = `${endpoint}/${testStudent2.id}/courses/calculus/quizzes/undefined`
+  jsonist.delete(url, (err, body, res) => {
+    if (err) t.error(err)
+    t.equal(res.statusCode, 404, 'should return 404 if property doesn\'t exist')
+    t.end()
+  })
+})
+
+tape('DELETE - nested property of student', async function (t) {
+  const url = `${endpoint}/${testStudent2.id}/courses/calculus/quizzes/ye0ab61`
+  jsonist.delete(url, (err, body, res) => {
+    if (err) t.error(err)
+    t.equal(res.statusCode, 200, 'should return correct status code')
+    t.deepEqual(body.courses.calculus.quizzes.ye0ab61, {}, 'should delete nested property of student')
+    t.end()
+  })
+})
+
 tape('cleanup', async function (t) {
   server.close()
   try {
