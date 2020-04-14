@@ -2,13 +2,15 @@ const fsPromises = require('fs').promises
 const path = require('path')
 const {
   getNestedProperty,
-  setNestedProperty
+  setNestedProperty,
+  removeNestedProperty
 } = require('./helpers')
 
 module.exports = {
   getHealth,
   getStudentProperty,
-  putStudentProperty
+  putStudentProperty,
+  deleteStudentProperty
 }
 
 async function getHealth (req, res, next) {
@@ -83,6 +85,42 @@ async function putStudentProperty (req, res) {
   // Set nested properties and save changes
   try {
     setNestedProperty(student, properties, req.body)
+    await fsPromises.writeFile(filePath, JSON.stringify(student, null, 2))
+    return res.json(student)
+  } catch (error) {
+    return res.status(500).json({ message: 'Something went wrong' })
+  }
+}
+
+// - DELETE /:student-id/:propertyName(/:propertyName)
+// - Removes data from `/data/${studentId}.json`.
+// - Returns 404 if that file or property doesn't exist.
+// - Should also remove nested properties.
+async function deleteStudentProperty (req, res) {
+  const studentId = req.params.studentId
+  const properties = req.params[0].split('/')
+  const dir = path.join(__dirname, 'data')
+  const filePath = path.join(dir, `${studentId}.json`)
+  let student = {}
+  // Retrieves data from `/data/${studentId}.json`
+  try {
+    const data = await fsPromises.readFile(filePath)
+    student = JSON.parse(data)
+  } catch (error) {
+    // Returns 404 if that file doesn't exist
+    if (error.code === 'ENOENT') {
+      return res.status(404).json({ message: "Sorry can't find that!" })
+    }
+    return res.status(500).json({ message: 'Something went wrong' })
+  }
+  // Returns 404 if that property doesn't exist
+  const property = getNestedProperty(properties, student)
+  if (!property) {
+    return res.status(404).json({ message: "Sorry can't find that!" })
+  }
+  // Remove nested properties and save changes
+  try {
+    removeNestedProperty(student, properties)
     await fsPromises.writeFile(filePath, JSON.stringify(student, null, 2))
     return res.json(student)
   } catch (error) {
