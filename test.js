@@ -56,6 +56,50 @@ tape('health', async function (t) {
   })
 })
 
+tape('PUT - data for new student in non-existent student json file', async function (t) {
+  const dir = path.join(__dirname, 'data')
+  const filePath = path.join(dir, `${testStudent.id}.json`)
+  try {
+    await fsPromises.stat(filePath)
+    t.fail('temporary test student json file should exist before')
+  } catch (err) {
+    t.equal(err.code, 'ENOENT', 'temporary test student json file should not exist before')
+  }
+  const url = `${endpoint}/${testStudent.id}/courses/calculus/quizzes/ye0ab61`
+  const payload = { 'score': 98 }
+  jsonist.put(url, payload, async (err, body, res) => {
+    if (err) t.error(err)
+    t.equal(res.statusCode, 200, 'should return correct status code')
+    t.deepEqual(body.courses.calculus.quizzes.ye0ab61, payload, 'payload exists on returned student')
+    try {
+      await fsPromises.access(filePath)
+      t.pass('temporary test student json file should exist after')
+    } catch (err) {
+      t.error(err)
+    }
+    t.end()
+  })
+})
+
+tape('PUT - data in existing student json file', async function (t) {
+  const dir = path.join(__dirname, 'data')
+  const filePath = path.join(dir, `${testStudent.id}.json`)
+  try {
+    await fsPromises.access(filePath)
+    t.pass('student json file should already exist')
+  } catch (err) {
+    t.error(err)
+  }
+  const url = `${endpoint}/${testStudent.id}/courses/calculus/quizzes/ye0ab61`
+  const payload = { 'time': Date.now() }
+  jsonist.put(url, payload, (err, body, res) => {
+    if (err) t.error(err)
+    t.equal(res.statusCode, 200, 'should return correct status code')
+    t.deepEqual(body.courses.calculus.quizzes.ye0ab61, payload, 'payload exists on returned student')
+    t.end()
+  })
+})
+
 tape('GET - student json file', async function (t) {
   const url = `${endpoint}/${testStudent2.id}/`
   jsonist.get(url, (err, body, res) => {
